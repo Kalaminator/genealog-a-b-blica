@@ -115,17 +115,19 @@
        border:1px solid #b08a3e;background:#fff7e6;color:#7a5a1e;font-size:13px;cursor:pointer;box-shadow:0 2px 6px rgba(0,0,0,.12)}
   #btnAislar:hover{background:#ffefc9}
   .nodo.oculto{display:none}
+  #scrollv{position:fixed;right:2px;top:58px;bottom:8px;width:12px;z-index:14;border-radius:6px;
+       background:rgba(138,109,59,.12);touch-action:none}
+  #scrollv-th{position:absolute;left:1px;right:1px;border-radius:5px;background:rgba(138,109,59,.55);
+       min-height:24px;cursor:grab}
+  #scrollv-th:hover,#scrollv-th.arrastrando{background:rgba(138,109,59,.8)}
   svg.aislando .era-fondo,svg.aislando .era-tag{display:none}
 </style>
 <link rel="manifest" href="manifest.webmanifest">
 <meta name="theme-color" content="#f4ecd9">
 <link rel="apple-touch-icon" href="icon-192.png">
 <meta name="apple-mobile-web-app-capable" content="yes">
-<script>
-if ('serviceWorker' in navigator && location.protocol.startsWith('http')) {
-  addEventListener('load', () => navigator.serviceWorker.register('sw.js').catch(()=>{}));
-}
-</script>
+<meta name="mobile-web-app-capable" content="yes">
+<script>if('serviceWorker' in navigator){window.addEventListener('load',()=>navigator.serviceWorker.register('sw.js'));}</script>
 </head>
 <body>
 <div id="top">
@@ -142,6 +144,7 @@ if ('serviceWorker' in navigator && location.protocol.startsWith('http')) {
 <div id="lienzo"></div>
 <div id="eje"></div>
 <button id="btnAislar">Aislar</button>
+<div id="scrollv"><div id="scrollv-th"></div></div>
 <div id="panel">
   <button id="cerrar">✕</button>
   <div id="panel-cab"></div>
@@ -312,7 +315,44 @@ function pintarEje(){
     e.appendChild(d);
   });
 }
-function aplicar(){svg.style.transform=`translate(${vx}px,${vy}px) scale(${esc_})`;svg.style.transformOrigin='0 0';pintarEje();}
+/* ---------- barra de desplazamiento vertical (Jehová → Jesús) ---------- */
+const scv=document.getElementById('scrollv'), scth=document.getElementById('scrollv-th');
+function altoContenido(){return (EJE_ROWS?EJE_ROWS[EJE_ROWS.length-1][0]+140:DATA.H)*esc_;}
+function pintarScroll(){
+  const H=altoContenido(), vh=lienzo.clientHeight, tr=scv.clientHeight;
+  if(H<=vh||!tr){scv.style.display='none';return;}
+  scv.style.display='block';
+  const th=Math.max(24,tr*vh/H);
+  const f=Math.min(1,Math.max(0,-vy/(H-vh)));
+  scth.style.height=th+'px';
+  scth.style.top=f*(tr-th)+'px';
+}
+let scDrag=null;
+scth.addEventListener('pointerdown',e=>{
+  e.stopPropagation();e.preventDefault();
+  scDrag={y:e.clientY,vy0:vy};
+  try{scth.setPointerCapture(e.pointerId);}catch(_){}
+  scth.classList.add('arrastrando');
+});
+scth.addEventListener('pointermove',e=>{
+  if(!scDrag)return;
+  const H=altoContenido(), vh=lienzo.clientHeight, tr=scv.clientHeight, th=Math.max(24,tr*vh/H);
+  if(tr-th<=0)return;
+  vy=scDrag.vy0-(e.clientY-scDrag.y)*(H-vh)/(tr-th);
+  vy=Math.min(0,Math.max(vh-H,vy));
+  aplicar();
+});
+function scSoltar(){scDrag=null;scth.classList.remove('arrastrando');}
+scth.addEventListener('pointerup',scSoltar);
+scth.addEventListener('pointercancel',scSoltar);
+scv.addEventListener('pointerdown',e=>{
+  if(e.target!==scv)return;
+  const H=altoContenido(), vh=lienzo.clientHeight, tr=scv.clientHeight;
+  const f=Math.min(1,Math.max(0,(e.clientY-scv.getBoundingClientRect().top)/tr));
+  vy=Math.min(0,Math.max(vh-H,-f*(H-vh)));
+  aplicar();
+});
+function aplicar(){svg.style.transform=`translate(${vx}px,${vy}px) scale(${esc_})`;svg.style.transformOrigin='0 0';pintarEje();pintarScroll();}
 aplicar();
 let drag=null,seMovio=false;
 const punteros=new Map();   // táctil: 1 dedo = arrastre, 2 dedos = pellizco (zoom)
