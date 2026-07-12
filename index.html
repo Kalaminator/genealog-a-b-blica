@@ -716,14 +716,14 @@ function ficha(s){
   const cuerpo=document.getElementById('panel-cuerpo');
   cuerpo.innerHTML=
     (d.d?`<p><em>${esc(d.d)}</em></p>`:'')+
-    (d.r?`<h3>Quién es</h3><p>${esc(d.r)}</p>`:'')+
+    (d.r&&d.r!==d.d?`<h3>Quién es</h3><p>${esc(d.r)}</p>`:'')+
     (d.pj?`<h3>Pasajes</h3><p class="pas">${esc(d.pj).replace(/[\[\]"]/g,'')}</p>`:'')+
     chips(d.pa.filter(x=>x==='Jehova'),'pa','Creador')+
     chips(d.pa.filter(x=>x!=='Jehova'),'pa','Padres')+
     chips(d.es,'es','Cónyuges')+
     chips(d.he,'he','Hermanos')+
     chips(d.hi,'hi',s==='Jehova'?'Creación directa':'Hijos')+
-    ((d.lr&&d.lr.length)?`<h3>Línea de Lucas 3 (interpretación)</h3><div>${d.lr.map(o=>`<span class="chip lrj" data-s="${o}">${esc(P[o]?P[o].n:o)}</span>`).join('')}</div>`:'')+
+    ((d.lr&&d.lr.length)?`<h3>Línea de Lucas 3 (genealogía de María)</h3><div>${d.lr.map(o=>`<span class="chip lrj" data-s="${o}">${esc(P[o]?P[o].n:o)}</span>`).join('')}</div>`:'')+
     (function(){const ds=slugs.filter(o=>(P[o].lr||[]).includes(s));return ds.length?`<h3>Descendiente (línea de Lucas)</h3><div>${ds.map(o=>`<span class="chip lrj" data-s="${o}">${esc(P[o].n)}</span>`).join('')}</div>`:'';})()+
     ((d.ln&&d.ln.length)?`<h3>Antepasado (linaje)</h3><div>${d.ln.map(o=>`<span class="chip ln" data-s="${o}">${esc(P[o]?P[o].n:o)}</span>`).join('')}</div>`:'')+
     (function(){const ds=slugs.filter(o=>(P[o].ln||[]).includes(s));return ds.length?`<h3>Descendiente (linaje)</h3><div>${ds.map(o=>`<span class="chip ln" data-s="${o}">${esc(P[o].n)}</span>`).join('')}</div>`:'';})()+
