@@ -22,7 +22,7 @@
   #eras-nav button:hover{background:var(--hl);color:#fff;border-color:var(--hl)}
   #zoomctl{display:flex;gap:4px}
   #zoomctl button{width:30px;height:30px;border:1px solid var(--line);background:#fff;border-radius:6px;cursor:pointer;font-size:15px}
-  #lienzo{position:absolute;top:54px;left:0;right:0;bottom:0;cursor:grab;overflow:hidden}
+  #lienzo{position:absolute;top:54px;left:0;right:0;bottom:0;cursor:grab;overflow:hidden;touch-action:none}
   #lienzo.arrastrando{cursor:grabbing}
   svg{display:block}
   .nodo{cursor:pointer}
@@ -300,11 +300,31 @@ function pintarEje(){
 function aplicar(){svg.style.transform=`translate(${vx}px,${vy}px) scale(${esc_})`;svg.style.transformOrigin='0 0';pintarEje();}
 aplicar();
 let drag=null,seMovio=false;
+const punteros=new Map();   // táctil: 1 dedo = arrastre, 2 dedos = pellizco (zoom)
+let pinch=null;
 lienzo.addEventListener('pointerdown',e=>{
-  drag={x:e.clientX-vx,y:e.clientY-vy,px:e.clientX,py:e.clientY,id:e.pointerId};
-  seMovio=false;
+  punteros.set(e.pointerId,{x:e.clientX,y:e.clientY});
+  if(punteros.size===1){
+    drag={x:e.clientX-vx,y:e.clientY-vy,px:e.clientX,py:e.clientY,id:e.pointerId};
+    seMovio=false;
+  }else{drag=null;pinch=null;seMovio=true;}   // segundo dedo: empieza pellizco
 });
 lienzo.addEventListener('pointermove',e=>{
+  if(!punteros.has(e.pointerId))return;
+  punteros.set(e.pointerId,{x:e.clientX,y:e.clientY});
+  if(punteros.size>=2){
+    const [a,b]=[...punteros.values()];
+    const d=Math.hypot(a.x-b.x,a.y-b.y), cx=(a.x+b.x)/2, cy=(a.y+b.y)/2;
+    if(!pinch){pinch={d,cx,cy};return;}
+    const nesc=Math.max(.06,Math.min(3,esc_*(d/pinch.d)));
+    const rf=nesc/esc_;
+    vx=cx-(pinch.cx-vx)*rf;
+    vy=cy-(pinch.cy-vy)*rf;
+    esc_=nesc;
+    pinch={d,cx,cy};
+    aplicar();
+    return;
+  }
   if(!drag)return;
   if(!seMovio){
     if(Math.abs(e.clientX-drag.px)+Math.abs(e.clientY-drag.py)<4)return;  // umbral: clic ≠ arrastre
@@ -314,8 +334,16 @@ lienzo.addEventListener('pointermove',e=>{
   }
   vx=e.clientX-drag.x;vy=e.clientY-drag.y;aplicar();
 });
-lienzo.addEventListener('pointerup',()=>{drag=null;lienzo.classList.remove('arrastrando');});
-lienzo.addEventListener('pointercancel',()=>{drag=null;lienzo.classList.remove('arrastrando');});
+function soltar(e){
+  punteros.delete(e.pointerId);
+  pinch=null;
+  if(punteros.size===1){   // de pellizco a un dedo: retoma el arrastre sin salto
+    const [p]=[...punteros.values()];
+    drag={x:p.x-vx,y:p.y-vy,px:p.x,py:p.y,id:[...punteros.keys()][0]};
+  }else if(punteros.size===0){drag=null;lienzo.classList.remove('arrastrando');}
+}
+lienzo.addEventListener('pointerup',soltar);
+lienzo.addEventListener('pointercancel',soltar);
 lienzo.addEventListener('wheel',e=>{
   e.preventDefault();
   const f=e.deltaY<0?1.15:1/1.15;
