@@ -110,7 +110,7 @@
        padding:4px 10px;border-radius:8px;border:1px solid var(--line)}
   #eje{position:fixed;left:0;top:48px;bottom:0;width:92px;pointer-events:none;z-index:8;
        background:linear-gradient(90deg,rgba(244,236,217,.95) 55%,rgba(244,236,217,0))}
-  .eje-tag{position:absolute;left:8px;font-size:12px;color:#8a6d3b;font-style:italic;white-space:nowrap}
+  .eje-tag{position:absolute;left:8px;font-size:14px;color:#6b5327;font-style:italic;white-space:nowrap}
   #btnAislar{position:fixed;left:104px;top:62px;z-index:16;display:none;padding:6px 14px;border-radius:8px;
        border:1px solid #b08a3e;background:#fff7e6;color:#7a5a1e;font-size:13px;cursor:pointer;box-shadow:0 2px 6px rgba(0,0,0,.12)}
   #btnAislar:hover{background:#ffefc9}
@@ -318,11 +318,14 @@ function pintarEje(){
 /* ---------- barra de desplazamiento vertical (Jehová → Jesús) ---------- */
 const scv=document.getElementById('scrollv'), scth=document.getElementById('scrollv-th');
 function altoContenido(){return (EJE_ROWS?EJE_ROWS[EJE_ROWS.length-1][0]+140:DATA.H)*esc_;}
+function escMin(){  // no alejar más allá de "ver todo"
+  return EJE_ROWS?.3:Math.min(lienzo.clientWidth/DATA.W, lienzo.clientHeight/DATA.H);
+}
 function pintarScroll(){
   const H=altoContenido(), vh=lienzo.clientHeight, tr=scv.clientHeight;
-  if(H<=vh||!tr){scv.style.display='none';return;}
-  scv.style.display='block';
-  const th=Math.max(24,tr*vh/H);
+  if(!tr)return;
+  const th=Math.max(24,Math.min(tr,tr*vh/H));
+  if(H<=vh){scth.style.height=tr+'px';scth.style.top='0px';return;}
   const f=Math.min(1,Math.max(0,-vy/(H-vh)));
   scth.style.height=th+'px';
   scth.style.top=f*(tr-th)+'px';
@@ -371,7 +374,7 @@ lienzo.addEventListener('pointermove',e=>{
     const [a,b]=[...punteros.values()];
     const d=Math.hypot(a.x-b.x,a.y-b.y), cx=(a.x+b.x)/2, cy=(a.y+b.y)/2;
     if(!pinch){pinch={d,cx,cy};return;}
-    const nesc=Math.max(.06,Math.min(3,esc_*(d/pinch.d)));
+    const nesc=Math.max(escMin(),Math.min(3,esc_*(d/pinch.d)));
     const rf=nesc/esc_;
     vx=cx-(pinch.cx-vx)*rf;
     vy=cy-(pinch.cy-vy)*rf;
@@ -403,13 +406,13 @@ lienzo.addEventListener('wheel',e=>{
   e.preventDefault();
   const f=e.deltaY<0?1.15:1/1.15;
   const nx=e.clientX-(e.clientX-vx)*f, ny=(e.clientY-54)-((e.clientY-54)-vy)*f;
-  esc_=Math.max(.06,Math.min(3,esc_*f));
+  esc_=Math.max(escMin(),Math.min(3,esc_*f));
   vx=nx;vy=ny;aplicar();
 },{passive:false});
 function zoomBtn(f){
   const cx=lienzo.clientWidth/2, cy=lienzo.clientHeight/2;
   vx=cx-(cx-vx)*f; vy=cy-(cy-vy)*f;
-  esc_=Math.max(.06,Math.min(3,esc_*f));aplicar();
+  esc_=Math.max(escMin(),Math.min(3,esc_*f));aplicar();
 }
 document.getElementById('z-in').onclick=()=>zoomBtn(1.25);
 document.getElementById('z-out').onclick=()=>zoomBtn(1/1.25);
